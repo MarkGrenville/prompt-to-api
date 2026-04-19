@@ -1,5 +1,30 @@
 import { onRequest } from 'firebase-functions/v2/https';
+import { Readable } from 'node:stream';
+import type { IncomingMessage } from 'node:http';
 import { handleApiRequest } from './api.js';
+
+/**
+ * firebase-functions v2 wraps the request in an Express app whose JSON / urlencoded
+ * body parser drains `req` before our handler runs. SvelteKit's `getRequest()`
+ * then can't read the body and aborts with a generic 400 "Bad Request". We
+ * rebuild the request stream from `req.rawBody` so SvelteKit (and any downstream
+ * stream-aware code) can read the body again.
+ */
+function withReplayableBody(req: IncomingMessage & { rawBody?: Buffer }): IncomingMessage {
+	if (!req.rawBody || req.rawBody.length === 0) return req;
+	const replay = Readable.from(req.rawBody) as unknown as IncomingMessage;
+	// Copy the IncomingMessage surface SvelteKit / polka touch.
+	(replay as unknown as Record<string, unknown>).headers = req.headers;
+	(replay as unknown as Record<string, unknown>).method = req.method;
+	(replay as unknown as Record<string, unknown>).url = req.url;
+	(replay as unknown as Record<string, unknown>).httpVersion = req.httpVersion;
+	(replay as unknown as Record<string, unknown>).httpVersionMajor = req.httpVersionMajor;
+	(replay as unknown as Record<string, unknown>).httpVersionMinor = req.httpVersionMinor;
+	(replay as unknown as Record<string, unknown>).socket = req.socket;
+	(replay as unknown as Record<string, unknown>).connection = (req as unknown as { connection: unknown }).connection;
+	(replay as unknown as Record<string, unknown>).complete = true;
+	return replay;
+}
 
 /**
  * Public API entry point.
@@ -66,7 +91,8 @@ export const ssr = onRequest(
 					);
 				return;
 			}
-			return (mod as { handler: (req: unknown, res: unknown) => unknown }).handler(req, res);
+			const replayReq = withReplayableBody(req as unknown as IncomingMessage & { rawBody?: Buffer });
+			return (mod as { handler: (req: unknown, res: unknown) => unknown }).handler(replayReq, res);
 		} catch (err) {
 			console.error('[ssr] unhandled', err);
 			if (!res.headersSent) res.status(500).send('Internal error');

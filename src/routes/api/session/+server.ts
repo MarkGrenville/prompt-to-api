@@ -27,7 +27,10 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		sessionCookie = idToken;
 	}
 
-	cookies.set('pta_session', sessionCookie, {
+	// MUST be named `__session` — Firebase Hosting strips every cookie except
+	// `__session` before forwarding requests to Cloud Functions / Cloud Run.
+	// https://firebase.google.com/docs/hosting/manage-cache#using_cookies
+	cookies.set('__session', sessionCookie, {
 		path: '/',
 		httpOnly: true,
 		secure: process.env.NODE_ENV === 'production',
@@ -56,6 +59,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 };
 
 export const DELETE: RequestHandler = async ({ cookies }) => {
-	cookies.delete('pta_session', { path: '/' });
+	cookies.delete('__session', { path: '/' });
 	return json({ ok: true });
 };

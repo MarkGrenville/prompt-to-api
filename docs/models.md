@@ -141,7 +141,10 @@ See [api.md](api.md) for detailed shapes. Summary:
 
 ### Internal API (SvelteKit server routes)
 
-Authenticated via `pta_session` cookie (set by `/api/session`). JSON:
+Authenticated via `__session` cookie (set by `/api/session`). The cookie is
+deliberately named `__session` because Firebase Hosting strips every other
+cookie at the CDN edge before forwarding requests to Cloud Functions /
+Cloud Run. JSON:
 
 | Route                                    | Methods       | Purpose                                       |
 | ---------------------------------------- | ------------- | --------------------------------------------- |
