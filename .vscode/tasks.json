@@ -1,0 +1,42 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start Full Dev",
+			"type": "shell",
+			"command": "pm2 start ecosystem.config.cjs && pm2 logs --lines 30 --nostream",
+			"problemMatcher": [],
+			"presentation": { "reveal": "always", "panel": "dedicated" }
+		},
+		{
+			"label": "Stop Full Dev",
+			"type": "shell",
+			"command": "pm2 delete ecosystem.config.cjs",
+			"problemMatcher": []
+		},
+		{
+			"label": "Logs: tail all",
+			"type": "shell",
+			"command": "pm2 logs prompt-to-api-frontend prompt-to-api-emulator prompt-to-api-functions-build --lines 100",
+			"problemMatcher": []
+		},
+		{
+			"label": "Restart Frontend",
+			"type": "shell",
+			"command": "pm2 restart prompt-to-api-frontend",
+			"problemMatcher": []
+		},
+		{
+			"label": "Restart Emulator",
+			"type": "shell",
+			"command": "pm2 restart prompt-to-api-emulator",
+			"problemMatcher": []
+		},
+		{
+			"label": "Test: backend smoke",
+			"type": "shell",
+			"command": "./scripts/test-backend.sh",
+			"problemMatcher": []
+		}
+	]
+}

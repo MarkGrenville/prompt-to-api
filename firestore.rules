@@ -1,0 +1,65 @@
+rules_version = '2';
+
+// Prompt To API — Firestore security rules.
+//
+// Philosophy:
+//   - All user-owned data lives under `users/{uid}/...` and is only accessible
+//     to that user from the client SDK.
+//   - Sensitive data (provider keys ciphertext, api token hashes) is denied to
+//     clients entirely — only Cloud Functions / server SDKs may read/write it.
+//   - No cross-user access is permitted from the client.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ---- User profile -----------------------------------------------------
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid);
+      allow delete: if false; // account deletion handled server-side
+
+      // Provider keys: ciphertext only. Server-only access.
+      match /providerKeys/{provider} {
+        allow read, write: if false;
+      }
+
+			// Assistants: owner can fully manage from the dashboard.
+			match /assistants/{assistantId} {
+				allow read, write: if isOwner(uid);
+
+				match /conversations/{conversationId} {
+					allow read, write: if isOwner(uid);
+
+					match /messages/{msgId} {
+						allow read, write: if isOwner(uid);
+					}
+				}
+
+				match /tokens/{tokenId} {
+					allow read, write: if isOwner(uid);
+				}
+			}
+    }
+
+    // ---- Top-level API token index — server-only -------------------------
+    // apiTokens/{sha256(token)} -> {ownerUid, assistantId, label, createdAt,
+    //                                lastUsedAt, revokedAt}
+    match /apiTokens/{tokenHash} {
+      allow read, write: if false;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

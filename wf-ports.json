@@ -1,0 +1,17 @@
+{
+  "id": "prompt-to-api",
+  "name": "Prompt To API",
+  "description": "Turn a system prompt into an authenticated assistant API with auto-generated OpenAPI + skill snippets for Cursor/Claude Code.",
+  "focusIdentifier": "prompt-to-api",
+  "projectPath": "/Users/markgrenville/Projects/prompt-to-api",
+  "firebaseProjectId": "prompt-to-api",
+  "services": [
+    {"name": "SvelteKit Dev Server", "port": 5260, "url": "http://localhost:5260", "purpose": "SvelteKit frontend (dashboard + landing) with hot reload"},
+    {"name": "SvelteKit Preview Server", "port": 5261, "url": "http://localhost:5261", "purpose": "Production build preview"},
+    {"name": "Firebase Auth Emulator", "port": 9230, "url": "http://localhost:9230", "purpose": "Firebase Auth emulator"},
+    {"name": "Firestore Emulator", "port": 9231, "url": "http://localhost:9231", "purpose": "Firestore emulator"},
+    {"name": "Functions Emulator", "port": 9232, "url": "http://localhost:9232", "purpose": "Cloud Functions emulator (public /v1 API)"},
+    {"name": "Emulator UI", "port": 9233, "url": "http://localhost:9233", "purpose": "Firebase emulator dashboard"},
+    {"name": "Emulator Hub", "port": 9234, "url": "http://localhost:9234", "purpose": "Firebase emulator hub (export/import coordination)"}
+  ]
+}

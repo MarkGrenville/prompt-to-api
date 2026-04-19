@@ -1,0 +1,36 @@
+node_modules/
+.pnpm-store/
+
+# Build outputs
+build/
+.svelte-kit/
+functions/lib/
+functions/build/
+shared/dist/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Firebase
+emulator-data/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+database-debug.log
+.firebase/
+
+# PM2 (keep example only)
+ecosystem.config.cjs
+
+# OS / editor
+.DS_Store
+*.log
+.vscode/*
+!.vscode/tasks.json
+!.vscode/settings.json.example
+
+# Test / coverage
+coverage/

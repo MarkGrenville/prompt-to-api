@@ -1,0 +1,7 @@
+packages:
+  - 'functions'
+  - 'shared'
+
+onlyBuiltDependencies:
+  - esbuild
+  - protobufjs

@@ -1,0 +1,36 @@
+{
+  "name": "prompt-to-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prompt To API — turn a system prompt into an authenticated assistant API with auto-generated OpenAPI + skill snippets for Cursor/Claude Code.",
+  "packageManager": "pnpm@10.31.0",
+  "type": "module",
+  "scripts": {
+    "prepare": "test -f ecosystem.config.cjs || cp ecosystem.config.example.cjs ecosystem.config.cjs",
+    "dev": "vite dev --port 5260 --host",
+    "build": "vite build",
+    "preview": "vite preview --port 5261 --host",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "deploy": "./scripts/deploy.sh",
+    "test:backend": "./scripts/test-backend.sh"
+  },
+  "dependencies": {
+    "@prompt-to-api/shared": "workspace:*",
+    "firebase": "^10.12.0",
+    "firebase-admin": "^12.3.0"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-node": "^5.2.0",
+    "@sveltejs/kit": "^2.5.27",
+    "@sveltejs/vite-plugin-svelte": "^4.0.0",
+    "@types/node": "^20.14.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.45",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.0.0",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.0"
+  }
+}
