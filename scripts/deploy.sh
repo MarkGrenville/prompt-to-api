@@ -16,7 +16,7 @@ PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 
 EXPECTED_PROJECT="$(node -e 'const fs=require("fs");console.log(JSON.parse(fs.readFileSync("./.firebaserc","utf8")).projects.default)')"
-CURRENT_PROJECT="$(firebase use --json 2>/dev/null | node -e 'let s=""; process.stdin.on("data",d=>s+=d); process.stdin.on("end",()=>{try{const j=JSON.parse(s);console.log(j.status==="success"?j.result.active:"")}catch(e){console.log("")}})' || true)"
+CURRENT_PROJECT="$(firebase use --json 2>/dev/null | node -e 'let s=""; process.stdin.on("data",d=>s+=d); process.stdin.on("end",()=>{try{const j=JSON.parse(s);if(j.status!=="success"){console.log("");return;}const r=j.result;console.log(typeof r==="string"?r:(r&&r.active)||"")}catch(e){console.log("")}})' || true)"
 
 if [[ -z "$CURRENT_PROJECT" ]]; then
 	echo "No active Firebase project — running \`firebase use $EXPECTED_PROJECT\`"

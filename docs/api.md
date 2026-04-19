@@ -162,10 +162,12 @@ Returns a complete OpenAPI 3.1 document describing the conversation endpoints
 for the assistant. Contains operation ids `createConversation`,
 `appendMessages`, `getConversation`, `deleteConversation`, and `chat`.
 
-If the assistant has `publicSpec: false` (the default), the spec requires a
-valid token. Set `publicSpec: true` via `PATCH /api/assistants/{id}` from the
-dashboard to make it fetchable unauthenticated (useful when giving the URL to
-Cursor / ChatGPT Actions which want to fetch the spec without a key).
+The spec is always public — it only exposes endpoint paths and schemas (no
+secrets), and `/docs` serves the same information anyway. The actual data
+endpoints stay protected by the bearer token. This means you can hand the
+`openapi.json` URL directly to tools like Cursor, ChatGPT Actions, or Postman
+without provisioning a shared token. The legacy `publicSpec` flag on the
+assistant doc is no longer consulted and will be removed in a future version.
 
 ### `GET /v1/assistants/{assistantId}/docs`
 

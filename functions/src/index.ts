@@ -3,6 +3,15 @@ import { Readable } from 'node:stream';
 import type { IncomingMessage } from 'node:http';
 import { handleApiRequest } from './api.js';
 
+// Tell SvelteKit's adapter-node to derive `url.origin` from the forwarded
+// headers Firebase Hosting injects, rather than from the Cloud Run internal
+// `Host` (which is the ugly `ssr-<hash>-uc.a.run.app`). Without this, any code
+// that builds links from `event.url.origin` (e.g. the dashboard's API tab)
+// ends up pointing users at the internal run.app hostname.
+// Docs: https://svelte.dev/docs/kit/adapter-node#Environment-variables
+process.env.PROTOCOL_HEADER = process.env.PROTOCOL_HEADER || 'x-forwarded-proto';
+process.env.HOST_HEADER = process.env.HOST_HEADER || 'x-forwarded-host';
+
 /**
  * firebase-functions v2 wraps the request in an Express app whose JSON / urlencoded
  * body parser drains `req` before our handler runs. SvelteKit's `getRequest()`

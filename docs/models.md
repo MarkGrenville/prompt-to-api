@@ -56,10 +56,10 @@ interface AssistantDoc {
 	slug: string; // "<slugified-name>-<6-char-id>"
 	systemPrompt: string;
 	provider: 'anthropic' | 'openai' | 'gemini';
-	model: string; // e.g. "claude-sonnet-4-5-20250929"
+	model: string; // e.g. "claude-sonnet-4-6"
 	temperature: number; // 0..2
 	maxTokens: number; // 16..32_000
-	publicSpec: boolean; // if true, OpenAPI spec fetchable without token
+	publicSpec: boolean; // legacy — openapi.json is always public now
 	createdAt: number;
 	updatedAt: number;
 }

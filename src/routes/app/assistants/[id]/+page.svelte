@@ -99,6 +99,68 @@
 		await invalidateAll();
 	}
 
+	// Tokens are stored hashed — we can't recover the original plaintext of an
+	// existing token. "Regenerate" is the closest thing to "copy it again":
+	// mint a new token with the same label, revoke the old one, and expose the
+	// new plaintext (which the CodeBlock auto-shows with a Copy button, and we
+	// also push to the clipboard immediately for convenience).
+	let rotatingId = $state<string | null>(null);
+	let rotateNotice = $state<string | null>(null);
+
+	async function regenerate(tokenId: string, label: string) {
+		if (
+			!confirm(
+				`Regenerate token "${label}"?\n\nThis creates a new token with the same label and REVOKES the old one. Any external system using the old token will stop working until you paste the new value.`
+			)
+		)
+			return;
+		rotatingId = tokenId;
+		rotateNotice = null;
+		newPlaintext = null;
+		try {
+			const createRes = await fetch(`/api/assistants/${data.assistant.id}/tokens`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ label })
+			});
+			if (!createRes.ok) {
+				rotateNotice = 'Could not create replacement token.';
+				return;
+			}
+			const body = await createRes.json();
+			newPlaintext = body.plaintext as string;
+
+			const revokeRes = await fetch(
+				`/api/assistants/${data.assistant.id}/tokens/${tokenId}`,
+				{ method: 'DELETE' }
+			);
+			if (!revokeRes.ok) {
+				rotateNotice = 'New token created, but revoking the old one failed. Revoke it manually.';
+			}
+
+			try {
+				await navigator.clipboard.writeText(newPlaintext);
+				rotateNotice = 'New token copied to clipboard.';
+			} catch {
+				rotateNotice = 'New token created — copy it from the panel below (clipboard access was denied).';
+			}
+
+			await invalidateAll();
+		} finally {
+			rotatingId = null;
+		}
+	}
+
+	async function copyToken(value: string) {
+		try {
+			await navigator.clipboard.writeText(value);
+			rotateNotice = 'Token copied to clipboard.';
+			setTimeout(() => (rotateNotice = null), 2000);
+		} catch {
+			rotateNotice = 'Clipboard access denied.';
+		}
+	}
+
 	// --- Skill snippet tab ----------------------------------------------------
 	let skillTab = $state<'cursor' | 'claude' | 'curl' | 'openapi'>('cursor');
 	let convBase = $derived(`${data.publicApiBase}/assistants/${data.assistant.id}/conversations`);
@@ -394,15 +456,32 @@ curl -X POST "${convBase}/$CID/messages" \\
 					{/if}
 				</div>
 
+				{#if rotateNotice}
+					<div class="card border-accent-500/30 bg-accent-500/5 p-3 text-sm text-accent-200">
+						{rotateNotice}
+					</div>
+				{/if}
+
 				<div class="card divide-y divide-ink-700/60">
+					<div class="p-4 text-xs text-neutral-500">
+						Full token values are only shown once at creation — we store a hash, not the token
+						itself. Use <span class="text-neutral-300">Regenerate</span> to get a fresh copyable
+						value (the old one will be revoked) or <span class="text-neutral-300">Copy</span>
+						on a token you created in this session.
+					</div>
 					{#each data.tokens as t}
-						<div class="flex items-center justify-between gap-4 p-4">
+						{@const isSessionToken =
+							(data.tokenOnce && t.id === data.tokens[0]?.id && data.tokenOnce) ||
+							(newPlaintext && t.lastFour === newPlaintext.slice(-4))}
+						<div class="flex flex-wrap items-center justify-between gap-4 p-4">
 							<div class="min-w-0">
 								<div class="flex items-center gap-2">
 									<span class="font-medium">{t.label}</span>
 									<span class="font-mono text-xs text-neutral-500">····{t.lastFour}</span>
 									{#if t.revokedAt}
 										<span class="badge border-red-500/30 bg-red-500/10 text-red-300">Revoked</span>
+									{:else if isSessionToken}
+										<span class="badge border-accent-500/30 bg-accent-500/10 text-accent-200">Plaintext available</span>
 									{/if}
 								</div>
 								<p class="text-xs text-neutral-500">
@@ -411,7 +490,24 @@ curl -X POST "${convBase}/$CID/messages" \\
 								</p>
 							</div>
 							{#if !t.revokedAt}
-								<button class="btn-danger" onclick={() => revoke(t.id)}>Revoke</button>
+								<div class="flex items-center gap-2">
+									{#if isSessionToken}
+										<button
+											class="btn-ghost"
+											onclick={() => copyToken(isSessionToken as string)}
+										>
+											Copy
+										</button>
+									{/if}
+									<button
+										class="btn-ghost"
+										disabled={rotatingId === t.id}
+										onclick={() => regenerate(t.id, t.label)}
+									>
+										{rotatingId === t.id ? 'Regenerating…' : 'Regenerate'}
+									</button>
+									<button class="btn-danger" onclick={() => revoke(t.id)}>Revoke</button>
+								</div>
 							{/if}
 						</div>
 					{/each}

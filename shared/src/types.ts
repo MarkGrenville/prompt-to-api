@@ -101,9 +101,9 @@ export interface ChatProvider {
 
 // Default model fallbacks (see docs/models.md).
 export const DEFAULT_MODELS: Record<ProviderId, string> = {
-	anthropic: 'claude-sonnet-4-5-20250929',
-	openai: 'gpt-4o-mini',
-	gemini: 'gemini-2.5-flash'
+	anthropic: 'claude-sonnet-4-6',
+	openai: 'gpt-5.4',
+	gemini: 'gemini-3-flash-preview'
 };
 
 /**
@@ -119,19 +119,69 @@ export interface ModelChoice {
 
 export const MODELS_BY_PROVIDER: Record<ProviderId, ModelChoice[]> = {
 	anthropic: [
-		{ id: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5', hint: 'Default · balanced' },
-		{ id: 'claude-opus-4-20250514', label: 'Claude Opus 4', hint: 'Highest quality' },
-		{ id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', hint: 'Fastest, cheapest' }
+		{
+			id: 'claude-sonnet-4-6',
+			label: 'Claude Sonnet 4.6',
+			hint: 'Default · balanced quality and speed'
+		},
+		{
+			id: 'claude-opus-4-7',
+			label: 'Claude Opus 4.7',
+			hint: 'Flagship · highest quality, slower, premium price'
+		},
+		{
+			id: 'claude-haiku-4-5-20251001',
+			label: 'Claude Haiku 4.5',
+			hint: 'Cheapest + fastest · for high-volume simple tasks'
+		},
+		{
+			id: 'claude-sonnet-4-5-20250929',
+			label: 'Claude Sonnet 4.5',
+			hint: 'Previous gen · pin if behavior must stay stable'
+		}
 	],
 	openai: [
-		{ id: 'gpt-4o-mini', label: 'GPT-4o mini', hint: 'Default · cheap + fast' },
-		{ id: 'gpt-4o', label: 'GPT-4o', hint: 'Flagship' },
-		{ id: 'o4-mini', label: 'o4-mini', hint: 'Reasoning, cheaper' },
-		{ id: 'o3', label: 'o3', hint: 'Reasoning, flagship' }
+		{
+			id: 'gpt-5.4',
+			label: 'GPT-5.4',
+			hint: 'Default · flagship balance of reasoning, speed, price'
+		},
+		{
+			id: 'gpt-5.4-pro',
+			label: 'GPT-5.4 Pro',
+			hint: 'Heaviest reasoning · premium for deep agentic work'
+		},
+		{
+			id: 'gpt-5.4-nano',
+			label: 'GPT-5.4 nano',
+			hint: 'Cheapest · for huge volume or trivial tasks'
+		},
+		{
+			id: 'o4-mini',
+			label: 'o4-mini',
+			hint: 'Reasoning specialist · cheap, strong at code and math'
+		}
 	],
 	gemini: [
-		{ id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', hint: 'Default · fast' },
-		{ id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', hint: 'Highest quality' },
-		{ id: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (exp)', hint: 'Experimental' }
+		{
+			id: 'gemini-3-flash-preview',
+			label: 'Gemini 3 Flash (preview)',
+			hint: 'Default · newest balanced model, very cheap'
+		},
+		{
+			id: 'gemini-3.1-pro-preview',
+			label: 'Gemini 3.1 Pro (preview)',
+			hint: 'Flagship · top reasoning, longer thinking'
+		},
+		{
+			id: 'gemini-3.1-flash-lite-preview',
+			label: 'Gemini 3.1 Flash-Lite (preview)',
+			hint: 'Cheapest · simple tasks at huge volume'
+		},
+		{
+			id: 'gemini-2.5-pro',
+			label: 'Gemini 2.5 Pro',
+			hint: 'Stable · non-preview if you want predictable behavior'
+		}
 	]
 };

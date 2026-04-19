@@ -434,17 +434,14 @@ function hostedBaseUrl(req: Request): string {
 }
 
 async function handleOpenApi(req: Request, res: Response, assistantId: string): Promise<void> {
+	// The OpenAPI spec is always public. It exposes only paths + schemas — no
+	// secrets — and /docs (Swagger UI) is already public, so gating the spec
+	// would just break the UI without adding security. The actual data
+	// endpoints remain bearer-token protected.
 	const assistant = await fetchAssistantPublic(assistantId);
 	if (!assistant) {
 		res.status(404).json({ error: 'assistant_not_found' });
 		return;
-	}
-	if (!assistant.publicSpec) {
-		const auth = await authenticate(req, assistantId);
-		if ('err' in auth) {
-			res.status(auth.err.status).json(auth.err.body);
-			return;
-		}
 	}
 	const spec = buildOpenApiSpec({ assistant, baseUrl: hostedBaseUrl(req) });
 	res.status(200).json(spec);
@@ -461,8 +458,221 @@ async function handleDocs(req: Request, res: Response, assistantId: string): Pro
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
   <style>
-    body { background:#07070a; margin:0; }
-    .swagger-ui .topbar { display:none; }
+    /*
+     * Dark theme for Swagger UI, tuned to match the Prompt To API dashboard.
+     * Swagger UI doesn't ship an official dark theme, so we override the key
+     * surface / text / border / accent colors. Scoped to .swagger-ui so we
+     * don't touch anything else on the page.
+     */
+    :root {
+      --pta-bg: #07070a;
+      --pta-panel: #0f1015;
+      --pta-panel-2: #14151c;
+      --pta-border: #24262f;
+      --pta-text: #e4e6eb;
+      --pta-text-dim: #9aa0a6;
+      --pta-accent: #8b5cf6;
+      --pta-get: #3b82f6;
+      --pta-post: #10b981;
+      --pta-delete: #ef4444;
+      --pta-patch: #f59e0b;
+    }
+    html, body { background: var(--pta-bg); margin: 0; color: var(--pta-text); }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; }
+
+    /* Top bar — Swagger's default green — we hide it for a cleaner look. */
+    .swagger-ui .topbar { display: none; }
+
+    /* Overall surface */
+    .swagger-ui, .swagger-ui .wrapper { background: var(--pta-bg); color: var(--pta-text); }
+    .swagger-ui .info,
+    .swagger-ui .info .title,
+    .swagger-ui .info p,
+    .swagger-ui .info li,
+    .swagger-ui .info a,
+    .swagger-ui .info table,
+    .swagger-ui .scheme-container,
+    .swagger-ui .opblock-tag,
+    .swagger-ui .opblock-tag small,
+    .swagger-ui .opblock .opblock-summary-path,
+    .swagger-ui .opblock .opblock-summary-description,
+    .swagger-ui .opblock-description-wrapper p,
+    .swagger-ui .opblock-external-docs-wrapper p,
+    .swagger-ui .opblock-title_normal p,
+    .swagger-ui .responses-inner h4,
+    .swagger-ui .responses-inner h5,
+    .swagger-ui table thead tr td,
+    .swagger-ui table thead tr th,
+    .swagger-ui .parameter__name,
+    .swagger-ui .parameter__type,
+    .swagger-ui .parameter__in,
+    .swagger-ui .parameter__deprecated,
+    .swagger-ui .response-col_status,
+    .swagger-ui .response-col_description,
+    .swagger-ui .tab li,
+    .swagger-ui .tab li button.tablinks,
+    .swagger-ui label,
+    .swagger-ui .model-title,
+    .swagger-ui .model,
+    .swagger-ui section.models h4,
+    .swagger-ui section.models h4 span,
+    .swagger-ui section.models .model-container,
+    .swagger-ui .btn,
+    .swagger-ui .dialog-ux .modal-ux,
+    .swagger-ui .dialog-ux .modal-ux-header h3,
+    .swagger-ui .dialog-ux .modal-ux-content,
+    .swagger-ui .auth-container h4 { color: var(--pta-text); }
+
+    /* Muted / secondary text */
+    .swagger-ui .opblock-tag small,
+    .swagger-ui .info small,
+    .swagger-ui .info .base-url,
+    .swagger-ui .parameter__in,
+    .swagger-ui .response-col_links .response-undocumented,
+    .swagger-ui .model .property.primitive,
+    .swagger-ui .prop-type,
+    .swagger-ui .prop-format,
+    .swagger-ui .markdown code,
+    .swagger-ui .renderedMarkdown code { color: var(--pta-text-dim); }
+
+    /* Links */
+    .swagger-ui a { color: #c4b5fd; }
+    .swagger-ui a:hover { color: #a78bfa; }
+
+    /* Scheme / servers bar + auth container */
+    .swagger-ui .scheme-container,
+    .swagger-ui .auth-wrapper,
+    .swagger-ui .auth-container {
+      background: var(--pta-panel);
+      border: 1px solid var(--pta-border);
+      box-shadow: none;
+    }
+
+    /* Operation blocks (panels per endpoint) */
+    .swagger-ui .opblock {
+      background: var(--pta-panel);
+      border: 1px solid var(--pta-border);
+      box-shadow: none;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+    .swagger-ui .opblock .opblock-summary { border-bottom: 1px solid var(--pta-border); }
+    .swagger-ui .opblock .opblock-summary-path,
+    .swagger-ui .opblock .opblock-summary-path__deprecated { color: var(--pta-text); }
+    .swagger-ui .opblock .opblock-section-header {
+      background: var(--pta-panel-2);
+      border-bottom: 1px solid var(--pta-border);
+      box-shadow: none;
+    }
+    .swagger-ui .opblock .opblock-section-header h4,
+    .swagger-ui .opblock .opblock-section-header > label { color: var(--pta-text); }
+
+    /* Method pills keep their Swagger colors for quick scanning, just with
+       slightly adjusted tints for legibility on dark. */
+    .swagger-ui .opblock.opblock-get { background: rgba(59, 130, 246, .06); border-color: rgba(59, 130, 246, .4); }
+    .swagger-ui .opblock.opblock-get .opblock-summary-method { background: var(--pta-get); }
+    .swagger-ui .opblock.opblock-post { background: rgba(16, 185, 129, .06); border-color: rgba(16, 185, 129, .4); }
+    .swagger-ui .opblock.opblock-post .opblock-summary-method { background: var(--pta-post); }
+    .swagger-ui .opblock.opblock-delete { background: rgba(239, 68, 68, .06); border-color: rgba(239, 68, 68, .4); }
+    .swagger-ui .opblock.opblock-delete .opblock-summary-method { background: var(--pta-delete); }
+    .swagger-ui .opblock.opblock-patch { background: rgba(245, 158, 11, .06); border-color: rgba(245, 158, 11, .4); }
+    .swagger-ui .opblock.opblock-patch .opblock-summary-method { background: var(--pta-patch); }
+
+    /* Tables */
+    .swagger-ui table { background: transparent; }
+    .swagger-ui table thead tr td,
+    .swagger-ui table thead tr th { border-bottom: 1px solid var(--pta-border); color: var(--pta-text-dim); }
+    .swagger-ui table tbody tr td { border-color: var(--pta-border); color: var(--pta-text); }
+    .swagger-ui .parameters-col_description { color: var(--pta-text); }
+
+    /* Inputs, selects, textareas */
+    .swagger-ui input[type=text],
+    .swagger-ui input[type=password],
+    .swagger-ui input[type=email],
+    .swagger-ui input[type=search],
+    .swagger-ui input[type=file],
+    .swagger-ui textarea,
+    .swagger-ui select {
+      background: #0a0b10;
+      color: var(--pta-text);
+      border: 1px solid var(--pta-border);
+      border-radius: 4px;
+    }
+    .swagger-ui input[type=text]:focus,
+    .swagger-ui textarea:focus,
+    .swagger-ui select:focus {
+      border-color: var(--pta-accent);
+      outline: none;
+    }
+
+    /* Code blocks / highlight.js output */
+    .swagger-ui .highlight-code,
+    .swagger-ui .microlight,
+    .swagger-ui .body-param__example,
+    .swagger-ui .example,
+    .swagger-ui pre,
+    .swagger-ui .response-col_description__inner div.markdown,
+    .swagger-ui .response-col_description__inner div.renderedMarkdown {
+      background: #0a0b10 !important;
+      color: #e4e6eb !important;
+      border: 1px solid var(--pta-border);
+      border-radius: 4px;
+    }
+    .swagger-ui .microlight { padding: 10px; }
+    .swagger-ui .copy-to-clipboard { background: #1a1b22; color: var(--pta-text); }
+
+    /* Models / schemas */
+    .swagger-ui section.models {
+      background: var(--pta-panel);
+      border: 1px solid var(--pta-border);
+      border-radius: 6px;
+    }
+    .swagger-ui section.models.is-open h4 { border-bottom: 1px solid var(--pta-border); }
+    .swagger-ui section.models .model-container { background: var(--pta-panel-2); border-color: var(--pta-border); }
+    .swagger-ui .model-toggle:after { filter: invert(1) brightness(1.2); }
+    .swagger-ui .model .property { color: var(--pta-text); }
+    .swagger-ui .model .property.primitive { color: var(--pta-text-dim); }
+
+    /* Buttons */
+    .swagger-ui .btn {
+      background: var(--pta-panel-2);
+      color: var(--pta-text);
+      border: 1px solid var(--pta-border);
+    }
+    .swagger-ui .btn:hover { background: #1f2029; }
+    .swagger-ui .btn.authorize { color: #c4b5fd; border-color: var(--pta-accent); }
+    .swagger-ui .btn.authorize svg { fill: #c4b5fd; }
+    .swagger-ui .btn.execute { background: var(--pta-accent); color: white; border-color: var(--pta-accent); }
+    .swagger-ui .btn.execute:hover { background: #7c3aed; }
+    .swagger-ui .btn.cancel { color: #f87171; border-color: #7f1d1d; }
+
+    /* Expand / collapse arrows */
+    .swagger-ui .expand-methods svg,
+    .swagger-ui .opblock-summary-control svg,
+    .swagger-ui .opblock-control-arrow,
+    .swagger-ui section.models h4 svg,
+    .swagger-ui .arrow { fill: var(--pta-text); }
+
+    /* Dialogs / modals (authorize) */
+    .swagger-ui .dialog-ux .backdrop-ux { background: rgba(0,0,0,.75); }
+    .swagger-ui .dialog-ux .modal-ux { background: var(--pta-panel); border: 1px solid var(--pta-border); }
+    .swagger-ui .dialog-ux .modal-ux-header { background: var(--pta-panel-2); border-bottom: 1px solid var(--pta-border); }
+    .swagger-ui .dialog-ux .modal-ux-content { color: var(--pta-text); }
+
+    /* Response section */
+    .swagger-ui .responses-inner { background: transparent; }
+    .swagger-ui .response { border-bottom: 1px solid var(--pta-border); }
+    .swagger-ui .response-col_status { color: var(--pta-text); }
+    .swagger-ui .response-col_description__inner p { color: var(--pta-text-dim); }
+
+    /* Tabs (Example / Schema) */
+    .swagger-ui .tab li.active button.tablinks,
+    .swagger-ui .tab li.tabitem.active h4.opblock-title_normal,
+    .swagger-ui .tab li.tabitem.active { color: var(--pta-accent); }
+
+    /* Info header title */
+    .swagger-ui .info hgroup.main a { color: var(--pta-text-dim); }
+    .swagger-ui .info .title small pre { background: var(--pta-panel-2); color: var(--pta-text); padding: 2px 6px; border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -475,7 +685,9 @@ async function handleDocs(req: Request, res: Response, assistantId: string): Pro
         dom_id: '#swagger-ui',
         presets: [SwaggerUIBundle.presets.apis],
         layout: 'BaseLayout',
-        persistAuthorization: true
+        persistAuthorization: true,
+        docExpansion: 'list',
+        defaultModelsExpandDepth: 0
       });
     };
   </script>

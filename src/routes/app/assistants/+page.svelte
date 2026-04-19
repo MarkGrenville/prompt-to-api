@@ -152,7 +152,7 @@
 						{#if model === '__custom__'}
 							<input
 								class="input mt-2 font-mono text-xs"
-								placeholder="e.g. claude-sonnet-4-5-20250929"
+								placeholder="e.g. claude-opus-4-7"
 								bind:value={customModel}
 							/>
 						{/if}
