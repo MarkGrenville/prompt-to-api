@@ -148,8 +148,11 @@ export function buildOpenApiSpec(args: {
 					properties: {
 						conversationId: {
 							type: 'string',
+							nullable: true,
+							default: '',
+							example: '',
 							description:
-								'Optional. If omitted, a new conversation is created. If provided, messages are appended to the existing conversation.'
+								'Optional. Leave empty / omit to auto-create a new conversation. If provided, messages are appended to that existing conversation. (In Swagger UI, clear this field — the pre-filled placeholder "string" is not a valid id.)'
 						},
 						messages: {
 							type: 'array',

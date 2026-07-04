@@ -284,7 +284,19 @@ async function handleChatShortcut(req: Request, res: Response, assistantId: stri
 	}
 	const ownerUid = auth.ctx.token.ownerUid;
 
-	let conversationId = body.conversationId;
+	// `/chat` is explicitly the convenience shortcut — if the caller doesn't
+	// supply a valid existing conversationId, we create one and carry on.
+	// Treat blank strings and the Swagger UI placeholder `"string"` as "not
+	// provided" (Swagger fills that in for optional string fields).
+	const provided = (body.conversationId ?? '').trim();
+	const looksIntentional = provided.length > 0 && provided !== 'string';
+
+	let conversationId: string | null = null;
+	if (looksIntentional) {
+		const existing = await conversationRef(ownerUid, assistantId, provided).get();
+		if (existing.exists) conversationId = provided;
+	}
+
 	if (!conversationId) {
 		const conv = await createConversation({
 			ownerUid,
@@ -304,7 +316,8 @@ async function handleChatShortcut(req: Request, res: Response, assistantId: stri
 		source: 'api'
 	});
 	if (!reply) {
-		res.status(404).json({ error: 'conversation_not_found' });
+		// Should be unreachable — we just created or verified the conversation.
+		res.status(500).json({ error: 'conversation_unavailable' });
 		return;
 	}
 	res.status(200).json(reply);
